@@ -5,6 +5,7 @@ import { Program } from '@coral-xyz/anchor';
 import { Rocket } from '../target/types/rocket';
 
 import * as dotenv from 'dotenv';
+import { expect } from 'chai';
 dotenv.config();
 
 const loadPrivateKey = () => {
@@ -64,7 +65,7 @@ describe('rocket', () => {
 
                 signer: wallet.publicKey,
 
-                // tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
+                tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
             })
             .instruction();
 
@@ -93,11 +94,15 @@ describe('rocket', () => {
         /* send and confirm tx */
         const sig = await anchor
             .getProvider()
-            .connection.sendRawTransaction(mintSignedTx.serialize());
+            .connection.sendRawTransaction(mintSignedTx.serialize(), {
+                skipPreflight: true,
+            });
         await anchor.getProvider().connection.confirmTransaction(sig, 'confirmed');
 
         /* get confirmed tx result */
         const txData = await anchor.getProvider().connection.getParsedTransaction(sig, 'confirmed');
         console.log(txData.meta.logMessages);
+
+        expect(txData.meta.err).to.eq(null);
     });
 });

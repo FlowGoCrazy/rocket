@@ -17,3 +17,18 @@ wallet = "/mnt/c/Users/Administrator/.config/solana/id.json"
 
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 --inline-diffs tests/**/*.ts"
+
+[test]
+startup_wait = 5000
+shutdown_wait = 2000
+upgradeable = false
+
+[[test.genesis]]
+address = "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+program = "/mnt/x/rust/solana/rocket/programs/token_metadata_program.so"
+
+[test.validator]
+bind_address = "0.0.0.0"
+url = "https://mainnet.helius-rpc.com/?api-key=e8c9c319-3c25-424b-a38b-9eef1d198187"
+ledger = ".anchor/test-ledger"
+rpc_port = 8899
