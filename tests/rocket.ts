@@ -1,5 +1,7 @@
+import { getAssociatedTokenAddress } from '@solana/spl-token';
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from '@coral-xyz/anchor';
+
 import { Rocket } from '../target/types/rocket';
 
 import * as dotenv from 'dotenv';
@@ -23,19 +25,25 @@ describe('rocket', () => {
     const wallet = new anchor.Wallet(keypair);
 
     it('creates a new token', async () => {
+        /* generate new addresses */
         const mintKeypair = anchor.web3.Keypair.generate();
         const mintWallet = new anchor.Wallet(mintKeypair);
 
         const mintAuthorityKeypair = anchor.web3.Keypair.generate();
 
-        // const bcKeypair = anchor.web3.Keypair.generate();
-        // const bcWallet = new anchor.Wallet(bcKeypair);
+        const [bondingCurveAddress] = anchor.web3.PublicKey.findProgramAddressSync([mintKeypair.publicKey.toBuffer(), Buffer.from('bonding_curve')], new anchor.web3.PublicKey(program.idl.address));
+
+        const associatedBondingCurve = await getAssociatedTokenAddress(mintKeypair.publicKey, bondingCurveAddress, true);
 
         const createIx = await program.methods
             .create()
-            .accounts({
+            .accountsPartial({
                 mint: mintKeypair.publicKey,
                 mintAuthority: mintAuthorityKeypair.publicKey,
+
+                bondingCurve: bondingCurveAddress,
+                associatedBondingCurve: associatedBondingCurve,
+
                 signer: wallet.publicKey,
             })
             .instruction();
