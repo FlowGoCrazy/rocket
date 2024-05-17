@@ -16,7 +16,7 @@ declare_id!("8ppDaTFZgYJpPCrpxLow3Bq5HzZicQ6M63MGeXHPoEGb");
 pub mod rocket {
     use super::*;
 
-    pub fn create(ctx: Context<Create>) -> ProgramResult {
+    pub fn create(ctx: Context<Create>, params: CreateParams) -> ProgramResult {
         /* init metadata for new mint */
         create_metadata_accounts_v3(
             CpiContext::new(
@@ -32,10 +32,9 @@ pub mod rocket {
                 },
             ),
             DataV2 {
-                name: "Test Rocket Token".to_string(),
-                symbol: "TRT".to_string(),
-                uri: "https://cf-ipfs.com/ipfs/QmSaKVNYHCc4cRU4Wks8nbYqpUr3ZpGdTi7mRdmcrXD9h6"
-                    .to_string(),
+                name: params.name,
+                symbol: params.symbol,
+                uri: params.uri,
                 seller_fee_basis_points: 0,
                 creators: None,
                 collection: None,
@@ -146,6 +145,13 @@ pub struct Create<'info> {
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub system_program: Program<'info, System>,
     pub rent: Sysvar<'info, Rent>,
+}
+
+#[derive(AnchorSerialize, AnchorDeserialize, Debug, Clone)]
+pub struct CreateParams {
+    pub name: String,
+    pub symbol: String,
+    pub uri: String,
 }
 
 #[derive(Accounts)]

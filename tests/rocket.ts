@@ -54,7 +54,11 @@ describe('rocket', () => {
         );
 
         const createIx = await program.methods
-            .create()
+            .create({
+                name: 'Test Rocket Token',
+                symbol: 'TRT',
+                uri: 'https://cf-ipfs.com/ipfs/QmSaKVNYHCc4cRU4Wks8nbYqpUr3ZpGdTi7mRdmcrXD9h6',
+            })
             .accountsPartial({
                 mint: mintKeypair.publicKey,
 
