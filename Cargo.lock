@@ -1670,6 +1670,7 @@ dependencies = [
  "anchor-lang",
  "anchor-spl",
  "num-bigint",
+ "num-traits",
  "solana-program",
  "spl-token",
 ]

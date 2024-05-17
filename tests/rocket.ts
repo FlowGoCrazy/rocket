@@ -1,4 +1,7 @@
-import { getAssociatedTokenAddress } from '@solana/spl-token';
+import {
+    getAssociatedTokenAddress,
+    createAssociatedTokenAccountInstruction,
+} from '@solana/spl-token';
 import * as anchor from '@coral-xyz/anchor';
 import { Program } from '@coral-xyz/anchor';
 
@@ -6,6 +9,7 @@ import { Rocket } from '../target/types/rocket';
 
 import * as dotenv from 'dotenv';
 import { expect } from 'chai';
+import { BN } from 'bn.js';
 dotenv.config();
 
 const loadPrivateKey = () => {
@@ -53,6 +57,12 @@ describe('rocket', () => {
             true,
         );
 
+        const associatedUser = await getAssociatedTokenAddress(
+            mintKeypair.publicKey,
+            wallet.publicKey,
+            false,
+        );
+
         const createIx = await program.methods
             .create({
                 name: 'Test Rocket Token',
@@ -67,7 +77,7 @@ describe('rocket', () => {
 
                 metadata: metadataAddress,
 
-                signer: wallet.publicKey,
+                user: wallet.publicKey,
 
                 tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
             })
@@ -76,11 +86,23 @@ describe('rocket', () => {
         const tx = new anchor.web3.Transaction();
         tx.add(createIx);
 
+        const createAtaIx = await createAssociatedTokenAccountInstruction(
+            wallet.publicKey,
+            associatedUser,
+            wallet.publicKey,
+            mintKeypair.publicKey,
+        );
+        tx.add(createAtaIx);
+
         const buyIx = await program.methods
-            .buy()
+            .buy(new BN(1_000_000_000))
             .accounts({
                 mint: mintKeypair.publicKey,
-                signer: wallet.publicKey,
+
+                associatedBondingCurve: associatedBondingCurve,
+
+                user: wallet.publicKey,
+                associatedUser: associatedUser,
             })
             .instruction();
         tx.add(buyIx);
