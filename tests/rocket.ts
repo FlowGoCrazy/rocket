@@ -15,6 +15,10 @@ const loadPrivateKey = () => {
     return new Uint8Array(privateKey.split(', ').map((s) => parseInt(s, 10)));
 };
 
+const TOKEN_METADATA_PROGRAM_ID = new anchor.web3.PublicKey(
+    'metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s',
+);
+
 describe('rocket', () => {
     anchor.setProvider(anchor.AnchorProvider.env());
     const provider = anchor.getProvider();
@@ -29,22 +33,38 @@ describe('rocket', () => {
         const mintKeypair = anchor.web3.Keypair.generate();
         const mintWallet = new anchor.Wallet(mintKeypair);
 
-        const mintAuthorityKeypair = anchor.web3.Keypair.generate();
+        const [bondingCurveAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            [mintKeypair.publicKey.toBuffer(), Buffer.from('bonding_curve')],
+            new anchor.web3.PublicKey(program.idl.address),
+        );
+        const [metadataAddress] = anchor.web3.PublicKey.findProgramAddressSync(
+            [
+                Buffer.from('metadata'),
+                TOKEN_METADATA_PROGRAM_ID.toBuffer(),
+                mintKeypair.publicKey.toBuffer(),
+            ],
+            TOKEN_METADATA_PROGRAM_ID,
+        );
 
-        const [bondingCurveAddress] = anchor.web3.PublicKey.findProgramAddressSync([mintKeypair.publicKey.toBuffer(), Buffer.from('bonding_curve')], new anchor.web3.PublicKey(program.idl.address));
-
-        const associatedBondingCurve = await getAssociatedTokenAddress(mintKeypair.publicKey, bondingCurveAddress, true);
+        const associatedBondingCurve = await getAssociatedTokenAddress(
+            mintKeypair.publicKey,
+            bondingCurveAddress,
+            true,
+        );
 
         const createIx = await program.methods
             .create()
             .accountsPartial({
                 mint: mintKeypair.publicKey,
-                mintAuthority: mintAuthorityKeypair.publicKey,
 
                 bondingCurve: bondingCurveAddress,
                 associatedBondingCurve: associatedBondingCurve,
 
+                metadata: metadataAddress,
+
                 signer: wallet.publicKey,
+
+                // tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
             })
             .instruction();
 
@@ -71,7 +91,9 @@ describe('rocket', () => {
         const mintSignedTx = await mintWallet.signTransaction(payerSignedTx);
 
         /* send and confirm tx */
-        const sig = await anchor.getProvider().connection.sendRawTransaction(mintSignedTx.serialize());
+        const sig = await anchor
+            .getProvider()
+            .connection.sendRawTransaction(mintSignedTx.serialize());
         await anchor.getProvider().connection.confirmTransaction(sig, 'confirmed');
 
         /* get confirmed tx result */
