@@ -78,9 +78,8 @@ pub struct Create<'info> {
 
 #[derive(Accounts)]
 pub struct Buy<'info> {
-    /// CHECK: checked in cpi
     #[account(mut)]
-    pub mint: UncheckedAccount<'info>,
+    pub mint: Account<'info, Mint>,
 
     #[account(
         mut,
