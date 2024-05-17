@@ -6,12 +6,11 @@ use anchor_spl::{
         create_metadata_accounts_v3, mpl_token_metadata::types::DataV2, CreateMetadataAccountsV3,
         Metadata as Metaplex,
     },
-    token::{Mint, Token, TokenAccount},
+    token::{set_authority, Mint, SetAuthority, Token, TokenAccount},
 };
+use spl_token::instruction::AuthorityType;
 
 declare_id!("8ppDaTFZgYJpPCrpxLow3Bq5HzZicQ6M63MGeXHPoEGb");
-
-const TOKEN_METADATA_PROGRRAM: Pubkey = pubkey!("metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s");
 
 #[program]
 pub mod rocket {
@@ -44,6 +43,21 @@ pub mod rocket {
             },
             false,
             true,
+            None,
+        )?;
+
+        /* mint tokens to associated bonding curve here */
+
+        /* revoke mint authority */
+        set_authority(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                SetAuthority {
+                    account_or_mint: ctx.accounts.mint.to_account_info(),
+                    current_authority: ctx.accounts.mint.to_account_info(),
+                },
+            ),
+            AuthorityType::MintTokens,
             None,
         )?;
 
