@@ -122,7 +122,6 @@ pub mod rocket {
             "initial quote: {} lamports for {} tokens",
             &sol_in,
             &tokens_out,
-            &tokens_out_u64,
         );
 
         /* should have a check to make sure buy does not exceed max per wallet here */
