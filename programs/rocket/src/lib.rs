@@ -8,6 +8,7 @@ use anchor_spl::{
     },
     token::{mint_to, set_authority, Mint, MintTo, SetAuthority, Token, TokenAccount},
 };
+use num_bigint::BigInt;
 use spl_token::instruction::AuthorityType;
 
 declare_id!("8ppDaTFZgYJpPCrpxLow3Bq5HzZicQ6M63MGeXHPoEGb");
@@ -73,11 +74,11 @@ pub mod rocket {
 
         /* set initial bonding curve state */
         let bonding_curve = &mut ctx.accounts.bonding_curve;
-        bonding_curve.virtual_token_reserves = 0;
-        bonding_curve.virtual_sol_reserves = 0;
-        bonding_curve.real_token_reserves = 1_000_000_000;
+        bonding_curve.virtual_token_reserves = 1_073_000_000_000_000; /* always starts at this number */
+        bonding_curve.virtual_sol_reserves = 30_000_000_000; /* always starts at this number */
+        bonding_curve.real_token_reserves = 793_100_000_000_000; /* always starts at this number */
         bonding_curve.real_sol_reserves = 0;
-        bonding_curve.token_total_supply = 1_000_000_000;
+        bonding_curve.token_total_supply = 1_000_000_000_000_000; /* 1 billion + 6 decimals */
         bonding_curve.complete = false;
 
         Ok(())
@@ -97,6 +98,17 @@ pub mod rocket {
         msg!("Real SOL Reserves: {}", bonding_curve.real_sol_reserves);
         msg!("Token Total Supply: {}", bonding_curve.token_total_supply);
         msg!("Complete: {}", bonding_curve.complete);
+
+        let real_token_reserves = BigInt::from(bonding_curve.real_token_reserves);
+        let virtual_sol_reserves = BigInt::from(bonding_curve.virtual_sol_reserves);
+        let virtual_token_reserves = BigInt::from(bonding_curve.virtual_token_reserves);
+
+        let mul_result = &real_token_reserves * virtual_sol_reserves;
+        let sub_result = virtual_token_reserves - &real_token_reserves;
+        let div_result = mul_result / sub_result;
+        let initial_quote: BigInt = div_result + 1;
+
+        msg!("initial quote: {} lamports", &initial_quote);
 
         Ok(())
     }
