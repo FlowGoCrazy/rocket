@@ -22,14 +22,20 @@ describe('rocket', () => {
     const keypair = anchor.web3.Keypair.fromSecretKey(loadPrivateKey());
     const wallet = new anchor.Wallet(keypair);
 
-    const bcKeypair = anchor.web3.Keypair.generate();
-    const bcWallet = new anchor.Wallet(bcKeypair);
+    it('creates a new token', async () => {
+        const mintKeypair = anchor.web3.Keypair.generate();
+        const mintWallet = new anchor.Wallet(mintKeypair);
 
-    it('initializes', async () => {
+        const mintAuthorityKeypair = anchor.web3.Keypair.generate();
+
+        // const bcKeypair = anchor.web3.Keypair.generate();
+        // const bcWallet = new anchor.Wallet(bcKeypair);
+
         const createIx = await program.methods
             .create()
             .accounts({
-                bondingCurve: bcKeypair.publicKey,
+                mint: mintKeypair.publicKey,
+                mintAuthority: mintAuthorityKeypair.publicKey,
                 signer: wallet.publicKey,
             })
             .instruction();
@@ -37,14 +43,14 @@ describe('rocket', () => {
         const tx = new anchor.web3.Transaction();
         tx.add(createIx);
 
-        const buyIx = await program.methods
-            .buy()
-            .accounts({
-                bondingCurve: bcKeypair.publicKey,
-                signer: wallet.publicKey,
-            })
-            .instruction();
-        tx.add(buyIx);
+        // const buyIx = await program.methods
+        //     .buy()
+        //     .accounts({
+        //         mint: mintKeypair.publicKey,
+        //         signer: wallet.publicKey,
+        //     })
+        //     .instruction();
+        // tx.add(buyIx);
 
         /* set blockhash / fee payer */
         const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
@@ -54,10 +60,10 @@ describe('rocket', () => {
 
         /* sign tx with all signer accounts */
         const payerSignedTx = await wallet.signTransaction(tx);
-        const bcSignedTx = await bcWallet.signTransaction(payerSignedTx);
+        const mintSignedTx = await mintWallet.signTransaction(payerSignedTx);
 
         /* send and confirm tx */
-        const sig = await anchor.getProvider().connection.sendRawTransaction(bcSignedTx.serialize());
+        const sig = await anchor.getProvider().connection.sendRawTransaction(mintSignedTx.serialize());
         await anchor.getProvider().connection.confirmTransaction(sig, 'confirmed');
 
         /* get confirmed tx result */

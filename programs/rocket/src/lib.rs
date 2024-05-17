@@ -1,7 +1,11 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::entrypoint::ProgramResult;
+use anchor_spl::token::{Mint, Token};
 
 declare_id!("8ppDaTFZgYJpPCrpxLow3Bq5HzZicQ6M63MGeXHPoEGb");
+
+/* SEEDS */
+const BONDING_CURVE: &str = "bonding_curve";
 
 #[program]
 pub mod rocket {
@@ -41,17 +45,53 @@ pub mod rocket {
 /* CONTEXT */
 #[derive(Accounts)]
 pub struct Create<'info> {
-    #[account(init, payer = signer, space = 8 + BondingCurve::SIZE)]
+    #[account(
+        init,
+        payer = signer,
+        mint::decimals = 6,
+        mint::authority = mint_authority,
+    )]
+    pub mint: Account<'info, Mint>,
+
+    /// CHECK: throwaway account
+    pub mint_authority: UncheckedAccount<'info>,
+
+    #[account(
+        init,
+        payer = signer,
+        seeds = [
+            mint.key().as_ref(),
+            BONDING_CURVE.as_bytes(),
+        ],
+        space = 8 + BondingCurve::SIZE,
+        bump,
+    )]
     pub bonding_curve: Account<'info, BondingCurve>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
+
+    pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
+    pub rent: Sysvar<'info, Rent>,
 }
 
 #[derive(Accounts)]
 pub struct Buy<'info> {
+    /// CHECK: checked in cpi
     #[account(mut)]
+    pub mint: UncheckedAccount<'info>,
+
+    #[account(
+        mut,
+        seeds = [
+            mint.key().as_ref(),
+            BONDING_CURVE.as_bytes(),
+        ],
+        bump,
+    )]
     pub bonding_curve: Account<'info, BondingCurve>,
+
     #[account(mut)]
     pub signer: Signer<'info>,
 }
