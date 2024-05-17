@@ -1,12 +1,12 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{entrypoint::ProgramResult, pubkey};
+use anchor_lang::solana_program::entrypoint::ProgramResult;
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::{
         create_metadata_accounts_v3, mpl_token_metadata::types::DataV2, CreateMetadataAccountsV3,
         Metadata as Metaplex,
     },
-    token::{set_authority, Mint, SetAuthority, Token, TokenAccount},
+    token::{mint_to, set_authority, Mint, MintTo, SetAuthority, Token, TokenAccount},
 };
 use spl_token::instruction::AuthorityType;
 
@@ -46,7 +46,18 @@ pub mod rocket {
             None,
         )?;
 
-        /* mint tokens to associated bonding curve here */
+        /* mint tokens to associated bonding curve */
+        mint_to(
+            CpiContext::new(
+                ctx.accounts.token_program.to_account_info(),
+                MintTo {
+                    mint: ctx.accounts.mint.to_account_info(),
+                    to: ctx.accounts.associated_bonding_curve.to_account_info(),
+                    authority: ctx.accounts.mint.to_account_info(),
+                },
+            ),
+            1_000_000_000,
+        )?;
 
         /* revoke mint authority */
         set_authority(
@@ -61,6 +72,7 @@ pub mod rocket {
             None,
         )?;
 
+        /* set initial bonding curve state */
         let bonding_curve = &mut ctx.accounts.bonding_curve;
         bonding_curve.virtual_token_reserves = 0;
         bonding_curve.virtual_sol_reserves = 0;
@@ -72,23 +84,23 @@ pub mod rocket {
         Ok(())
     }
 
-    // pub fn buy(ctx: Context<Buy>) -> ProgramResult {
-    //     let bonding_curve = &ctx.accounts.bonding_curve;
-    //     msg!(
-    //         "Virtual Token Reserves: {}",
-    //         bonding_curve.virtual_token_reserves
-    //     );
-    //     msg!(
-    //         "Virtual SOL Reserves: {}",
-    //         bonding_curve.virtual_sol_reserves
-    //     );
-    //     msg!("Real Token Reserves: {}", bonding_curve.real_token_reserves);
-    //     msg!("Real SOL Reserves: {}", bonding_curve.real_sol_reserves);
-    //     msg!("Token Total Supply: {}", bonding_curve.token_total_supply);
-    //     msg!("Complete: {}", bonding_curve.complete);
+    pub fn buy(ctx: Context<Buy>) -> ProgramResult {
+        let bonding_curve = &ctx.accounts.bonding_curve;
+        msg!(
+            "Virtual Token Reserves: {}",
+            bonding_curve.virtual_token_reserves
+        );
+        msg!(
+            "Virtual SOL Reserves: {}",
+            bonding_curve.virtual_sol_reserves
+        );
+        msg!("Real Token Reserves: {}", bonding_curve.real_token_reserves);
+        msg!("Real SOL Reserves: {}", bonding_curve.real_sol_reserves);
+        msg!("Token Total Supply: {}", bonding_curve.token_total_supply);
+        msg!("Complete: {}", bonding_curve.complete);
 
-    //     Ok(())
-    // }
+        Ok(())
+    }
 }
 
 /* CONTEXT */
@@ -96,8 +108,6 @@ pub mod rocket {
 pub struct Create<'info> {
     #[account(
         init,
-        // seeds = [b"mint"],
-        // bump,
         payer = signer,
         mint::decimals = 6,
         mint::authority = mint,
@@ -138,24 +148,24 @@ pub struct Create<'info> {
     pub rent: Sysvar<'info, Rent>,
 }
 
-// #[derive(Accounts)]
-// pub struct Buy<'info> {
-//     #[account(mut)]
-//     pub mint: Account<'info, Mint>,
+#[derive(Accounts)]
+pub struct Buy<'info> {
+    #[account(mut)]
+    pub mint: Account<'info, Mint>,
 
-//     #[account(
-//         mut,
-//         seeds = [
-//             mint.key().as_ref(),
-//             b"bonding_curve",
-//         ],
-//         bump,
-//     )]
-//     pub bonding_curve: Account<'info, BondingCurve>,
+    #[account(
+        mut,
+        seeds = [
+            mint.key().as_ref(),
+            b"bonding_curve",
+        ],
+        bump,
+    )]
+    pub bonding_curve: Account<'info, BondingCurve>,
 
-//     #[account(mut)]
-//     pub signer: Signer<'info>,
-// }
+    #[account(mut)]
+    pub signer: Signer<'info>,
+}
 
 /* ACCOUNTS */
 #[account]

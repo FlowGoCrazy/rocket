@@ -29,7 +29,7 @@ describe('rocket', () => {
     const keypair = anchor.web3.Keypair.fromSecretKey(loadPrivateKey());
     const wallet = new anchor.Wallet(keypair);
 
-    it('creates a new token', async () => {
+    it('can create a new token', async () => {
         /* generate new addresses */
         const mintKeypair = anchor.web3.Keypair.generate();
         const mintWallet = new anchor.Wallet(mintKeypair);
@@ -72,14 +72,14 @@ describe('rocket', () => {
         const tx = new anchor.web3.Transaction();
         tx.add(createIx);
 
-        // const buyIx = await program.methods
-        //     .buy()
-        //     .accounts({
-        //         mint: mintKeypair.publicKey,
-        //         signer: wallet.publicKey,
-        //     })
-        //     .instruction();
-        // tx.add(buyIx);
+        const buyIx = await program.methods
+            .buy()
+            .accounts({
+                mint: mintKeypair.publicKey,
+                signer: wallet.publicKey,
+            })
+            .instruction();
+        tx.add(buyIx);
 
         /* set blockhash / fee payer */
         const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
