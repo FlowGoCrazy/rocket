@@ -22,6 +22,10 @@ pub struct Swap<'info> {
     #[account(mut)]
     pub fee_recipient: AccountInfo<'info>,
 
+    /// CHECK: Checked Within Instruction
+    #[account(mut)]
+    pub referrer: AccountInfo<'info>,
+
     #[account(mut)]
     pub mint: Account<'info, Mint>,
 

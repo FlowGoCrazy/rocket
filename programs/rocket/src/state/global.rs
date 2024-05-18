@@ -4,8 +4,9 @@ use anchor_lang::prelude::*;
 pub struct Global {
     pub initialized: bool, /* 1 byte */
 
-    pub fee_recipient: Pubkey, /* 32 bytes */
-    pub fee_basis_points: u64, /* 8 bytes */
+    pub fee_recipient: Pubkey,       /* 32 bytes */
+    pub fee_basis_points: u64,       /* 8 bytes */
+    pub ref_share_basis_points: u64, /* 8 bytes */
 
     pub initial_virtual_token_reserves: u64, /* 8 bytes */
     pub initial_virtual_sol_reserves: u64,   /* 8 bytes */
@@ -14,7 +15,7 @@ pub struct Global {
 }
 
 impl Global {
-    pub const SIZE: usize = 1 + 32 + 8 + 8 + 8 + 8 + 8;
+    pub const SIZE: usize = 1 + 32 + 8 + 8 + 8 + 8 + 8 + 8;
 
     pub fn print(&self) -> Result<()> {
         msg!("Initialized: {}", self.initialized);

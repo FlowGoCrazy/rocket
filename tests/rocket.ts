@@ -42,6 +42,7 @@ describe('rocket', () => {
             [mintKeypair.publicKey.toBuffer(), Buffer.from('bonding_curve')],
             new anchor.web3.PublicKey(program.idl.address),
         );
+
         const [metadataAddress] = anchor.web3.PublicKey.findProgramAddressSync(
             [
                 Buffer.from('metadata'),
@@ -63,12 +64,15 @@ describe('rocket', () => {
             false,
         );
 
+        const mockReferrerKeypair = anchor.web3.Keypair.generate();
+
         const tx = new anchor.web3.Transaction();
 
         const adminUpdateGlobalIx = await program.methods
             .adminUpdateGlobal({
                 feeRecipient: wallet.publicKey,
                 feeBasisPoints: new BN(100),
+                refShareBasisPoints: new BN(25),
                 initialVirtualTokenReserves: new BN(1_073_000_000_000_000),
                 initialVirtualSolReserves: new BN(30_000_000_000),
                 initialRealTokenReserves: new BN(793_100_000_000_000),
@@ -123,6 +127,7 @@ describe('rocket', () => {
             .swapSolToFixedToken(new BN(50_000_000_000_000), new BN(1_466_275_659))
             .accounts({
                 feeRecipient: wallet.publicKey,
+                referrer: mockReferrerKeypair.publicKey,
 
                 mint: mintKeypair.publicKey,
 
@@ -138,6 +143,7 @@ describe('rocket', () => {
             .swapFixedTokenToSol(new BN(50_000_000_000_000), new BN(1_000_000_000))
             .accounts({
                 feeRecipient: wallet.publicKey,
+                referrer: mockReferrerKeypair.publicKey,
 
                 mint: mintKeypair.publicKey,
 

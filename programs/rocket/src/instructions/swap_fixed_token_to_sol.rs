@@ -20,6 +20,12 @@ pub fn swap_fixed_token_to_sol(ctx: Context<Swap>, tokens_in: u64, min_sol_out: 
         ErrorCodes::FeeRecipientInvalid,
     );
 
+    /* fail if referrer is the same as user */
+    require!(
+        ctx.accounts.referrer.key() != ctx.accounts.user.key(),
+        ErrorCodes::ReferrerInvalid
+    );
+
     let bonding_curve = &ctx.accounts.bonding_curve;
     bonding_curve.print()?;
 
@@ -55,9 +61,56 @@ pub fn swap_fixed_token_to_sol(ctx: Context<Swap>, tokens_in: u64, min_sol_out: 
         &tokens_in,
     );
 
-    /* calculate fees */
-    let trade_fee = (sol_out_u64 * global.fee_basis_points) / 10_000;
-    msg!("trade fee: {} lamports", trade_fee);
+    /* depending on whether or not the user was referred, calculate and send fees */
+    if global.fee_basis_points > 0 {
+        if ctx.accounts.referrer.key() == global.fee_recipient {
+            /* if referrer is default ( fee_recipient ) just send the whole trade_fee at once */
+            let trade_fee =
+                (sol_out_u64 * (global.fee_basis_points - global.ref_share_basis_points)) / 10_000;
+            invoke(
+                &system_instruction::transfer(
+                    &ctx.accounts.user.key(),
+                    &ctx.accounts.fee_recipient.key(),
+                    trade_fee,
+                ),
+                &[
+                    ctx.accounts.user.to_account_info(),
+                    ctx.accounts.fee_recipient.to_account_info(),
+                    ctx.accounts.system_program.to_account_info(),
+                ],
+            )?;
+        } else {
+            /* if not then send the fee_recipient's and referrer's rewards separately */
+            let fee_recipient_reward =
+                (sol_out_u64 * (global.fee_basis_points - global.ref_share_basis_points)) / 10_000;
+            invoke(
+                &system_instruction::transfer(
+                    &ctx.accounts.user.key(),
+                    &ctx.accounts.fee_recipient.key(),
+                    fee_recipient_reward,
+                ),
+                &[
+                    ctx.accounts.user.to_account_info(),
+                    ctx.accounts.fee_recipient.to_account_info(),
+                    ctx.accounts.system_program.to_account_info(),
+                ],
+            )?;
+
+            let referrer_reward = (sol_out_u64 * global.ref_share_basis_points) / 10_000;
+            invoke(
+                &system_instruction::transfer(
+                    &ctx.accounts.user.key(),
+                    &ctx.accounts.referrer.key(),
+                    referrer_reward,
+                ),
+                &[
+                    ctx.accounts.user.to_account_info(),
+                    ctx.accounts.referrer.to_account_info(),
+                    ctx.accounts.system_program.to_account_info(),
+                ],
+            )?;
+        }
+    }
 
     /* transfer tokens to bonding curve */
     transfer(
@@ -71,22 +124,6 @@ pub fn swap_fixed_token_to_sol(ctx: Context<Swap>, tokens_in: u64, min_sol_out: 
         ),
         tokens_in,
     )?;
-
-    /* transfer fees to fee recipient */
-    if trade_fee > 0 {
-        invoke(
-            &system_instruction::transfer(
-                &ctx.accounts.user.key(),
-                &ctx.accounts.fee_recipient.key(),
-                trade_fee,
-            ),
-            &[
-                ctx.accounts.user.to_account_info(),
-                ctx.accounts.fee_recipient.to_account_info(),
-                ctx.accounts.system_program.to_account_info(),
-            ],
-        )?;
-    }
 
     /* transfer sol from bonding curve to user */
     require!(

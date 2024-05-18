@@ -8,6 +8,7 @@ pub fn admin_update_global(ctx: Context<UpdateGlobal>, params: UpdateGlobalParam
     global.initialized = true;
     global.fee_recipient = params.fee_recipient;
     global.fee_basis_points = params.fee_basis_points;
+    global.ref_share_basis_points = params.ref_share_basis_points;
     global.initial_virtual_token_reserves = params.initial_virtual_token_reserves;
     global.initial_virtual_sol_reserves = params.initial_virtual_sol_reserves;
     global.initial_real_token_reserves = params.initial_real_token_reserves;
@@ -39,6 +40,7 @@ pub struct UpdateGlobal<'info> {
 pub struct UpdateGlobalParams {
     pub fee_recipient: Pubkey,
     pub fee_basis_points: u64,
+    pub ref_share_basis_points: u64,
 
     pub initial_virtual_token_reserves: u64,
     pub initial_virtual_sol_reserves: u64,

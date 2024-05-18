@@ -8,6 +8,9 @@ pub enum ErrorCodes {
     #[msg("fee recipient invalid: mismatch between provided fee recipient and global state")]
     FeeRecipientInvalid,
 
+    #[msg("referrer invalid: you cant refer yourself :)")]
+    ReferrerInvalid,
+
     #[msg("slippage exceeded: output less than minimum required")]
     SlippageExceeded,
 
