@@ -6,9 +6,22 @@ use anchor_spl::{
 };
 
 use crate::state::bonding_curve::BondingCurve;
+use crate::state::global::Global;
 
 #[derive(Accounts)]
 pub struct Swap<'info> {
+    #[account(
+        seeds = [
+            b"global",
+        ],
+        bump,
+    )]
+    pub global: Account<'info, Global>,
+
+    /// CHECK: Checked Within Instruction
+    #[account(mut)]
+    pub fee_recipient: AccountInfo<'info>,
+
     #[account(mut)]
     pub mint: Account<'info, Mint>,
 

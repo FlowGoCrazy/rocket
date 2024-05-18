@@ -10,18 +10,31 @@ use crate::errors::ErrorCodes;
 use crate::instructions::swap::Swap;
 
 pub fn swap_fixed_sol_to_token(ctx: Context<Swap>, sol_in: u64, min_tokens_out: u64) -> Result<()> {
+    let global = &ctx.accounts.global;
+
+    /* fail if global hasnt been initialized */
+    require!(global.initialized, ErrorCodes::GlobalUninitialized);
+
+    /* fail if provided fee_recipient does not match global state */
+    require!(
+        ctx.accounts.fee_recipient.key() == global.fee_recipient,
+        ErrorCodes::FeeRecipientInvalid,
+    );
+
     let bonding_curve = &ctx.accounts.bonding_curve;
     bonding_curve.print()?;
 
     /* fail if the bonding curve is already complete */
-    if bonding_curve.complete {
-        return err!(ErrorCodes::BondingCurveComplete);
-    }
+    require!(!bonding_curve.complete, ErrorCodes::BondingCurveComplete);
+
+    /* fail if the bonding curve is already complete */
+    require!(!bonding_curve.complete, ErrorCodes::BondingCurveComplete);
 
     /* fail if min_tokens_out is greater than real_token_reserves */
-    if min_tokens_out > bonding_curve.real_token_reserves {
-        return err!(ErrorCodes::InsufficientReserves);
-    }
+    require!(
+        min_tokens_out <= bonding_curve.real_token_reserves,
+        ErrorCodes::InsufficientReserves
+    );
 
     let buy_sol_amount = BigInt::from(sol_in);
 
@@ -40,17 +53,20 @@ pub fn swap_fixed_sol_to_token(ctx: Context<Swap>, sol_in: u64, min_tokens_out: 
     let tokens_out_u64 = std::cmp::min(tokens_out_u64, bonding_curve.real_token_reserves);
 
     /* make sure tokens_out_u64 is more than min_tokens_out */
-    if tokens_out_u64 < min_tokens_out {
-        return err!(ErrorCodes::SlippageExceeded);
-    }
-
-    /* should calculate fees here too */
+    require!(
+        tokens_out_u64 >= min_tokens_out,
+        ErrorCodes::SlippageExceeded
+    );
 
     msg!(
         "initial quote: {} lamports for {} tokens",
         &sol_in,
         &tokens_out,
     );
+
+    /* calculate fees */
+    let trade_fee = (sol_in * global.fee_basis_points) / 10_000;
+    msg!("trade fee: {} lamports", trade_fee);
 
     /* should have a check to make sure buy does not exceed max per wallet here */
 
@@ -64,6 +80,20 @@ pub fn swap_fixed_sol_to_token(ctx: Context<Swap>, sol_in: u64, min_tokens_out: 
         &[
             ctx.accounts.user.to_account_info(),
             ctx.accounts.bonding_curve.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+        ],
+    )?;
+
+    /* transfer fees to fee recipient */
+    invoke(
+        &system_instruction::transfer(
+            &ctx.accounts.user.key(),
+            &ctx.accounts.fee_recipient.key(),
+            trade_fee,
+        ),
+        &[
+            ctx.accounts.user.to_account_info(),
+            ctx.accounts.fee_recipient.to_account_info(),
             ctx.accounts.system_program.to_account_info(),
         ],
     )?;
@@ -100,8 +130,6 @@ pub fn swap_fixed_sol_to_token(ctx: Context<Swap>, sol_in: u64, min_tokens_out: 
     if bonding_curve.real_token_reserves == 0 {
         bonding_curve.complete = true;
     }
-
-    /* transfer fees to fee recipient */
 
     Ok(())
 }

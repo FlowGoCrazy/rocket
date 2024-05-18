@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_spl::token::{transfer, Transfer};
 use num_bigint::BigInt;
 use num_traits::cast::ToPrimitive;
@@ -8,18 +9,28 @@ use crate::errors::ErrorCodes;
 use crate::instructions::swap::Swap;
 
 pub fn swap_token_to_fixed_sol(ctx: Context<Swap>, sol_out: u64, max_tokens_in: u64) -> Result<()> {
+    let global = &ctx.accounts.global;
+
+    /* fail if global hasnt been initialized */
+    require!(global.initialized, ErrorCodes::GlobalUninitialized);
+
+    /* fail if provided fee_recipient does not match global state */
+    require!(
+        ctx.accounts.fee_recipient.key() == global.fee_recipient,
+        ErrorCodes::FeeRecipientInvalid,
+    );
+
     let bonding_curve = &ctx.accounts.bonding_curve;
     bonding_curve.print()?;
 
     /* fail if the bonding curve is already complete */
-    if bonding_curve.complete {
-        return err!(ErrorCodes::BondingCurveComplete);
-    }
+    require!(!bonding_curve.complete, ErrorCodes::BondingCurveComplete);
 
     /* fail if sol_out is greater than real_sol_reserves */
-    if sol_out > bonding_curve.real_sol_reserves {
-        return err!(ErrorCodes::InsufficientReserves);
-    }
+    require!(
+        sol_out <= bonding_curve.real_sol_reserves,
+        ErrorCodes::InsufficientReserves
+    );
 
     let sol_out_bigint = BigInt::from(sol_out);
 
@@ -33,17 +44,17 @@ pub fn swap_token_to_fixed_sol(ctx: Context<Swap>, sol_out: u64, max_tokens_in: 
     let tokens_in_u64 = tokens_in.to_u64().unwrap();
 
     /* make sure tokens_in_u64 is less than or equal to max_tokens_in */
-    if tokens_in_u64 > max_tokens_in {
-        return err!(ErrorCodes::SlippageExceeded);
-    }
-
-    /* should calculate fees here too */
+    require!(tokens_in_u64 <= max_tokens_in, ErrorCodes::SlippageExceeded);
 
     msg!(
         "initial quote: {} tokens for {} lamports",
         &tokens_in_u64,
         &sol_out,
     );
+
+    /* calculate fees */
+    let trade_fee = (sol_out * global.fee_basis_points) / 10_000;
+    msg!("trade fee: {} lamports", trade_fee);
 
     /* transfer tokens to bonding curve */
     transfer(
@@ -58,16 +69,30 @@ pub fn swap_token_to_fixed_sol(ctx: Context<Swap>, sol_out: u64, max_tokens_in: 
         tokens_in_u64,
     )?;
 
+    /* transfer fees to fee recipient */
+    invoke(
+        &system_instruction::transfer(
+            &ctx.accounts.user.key(),
+            &ctx.accounts.fee_recipient.key(),
+            trade_fee,
+        ),
+        &[
+            ctx.accounts.user.to_account_info(),
+            ctx.accounts.fee_recipient.to_account_info(),
+            ctx.accounts.system_program.to_account_info(),
+        ],
+    )?;
+
     /* transfer sol from bonding curve to user */
-    if **ctx
-        .accounts
-        .bonding_curve
-        .to_account_info()
-        .try_borrow_lamports()?
-        < sol_out
-    {
-        return err!(ErrorCodes::InsufficientReserves);
-    }
+    require!(
+        **ctx
+            .accounts
+            .bonding_curve
+            .to_account_info()
+            .try_borrow_lamports()?
+            >= sol_out,
+        ErrorCodes::InsufficientReserves
+    );
     **ctx
         .accounts
         .bonding_curve

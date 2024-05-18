@@ -18,9 +18,7 @@ pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
     let global = &ctx.accounts.global;
 
     /* fail if global hasnt been initialized */
-    if !global.initialized {
-        return err!(ErrorCodes::GlobalUninitialized);
-    }
+    require!(global.initialized, ErrorCodes::GlobalUninitialized);
 
     /* init metadata for new mint */
     create_metadata_accounts_v3(
@@ -91,20 +89,20 @@ pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
 #[derive(Accounts)]
 pub struct Create<'info> {
     #[account(
-        init,
-        payer = user,
-        mint::decimals = 6,
-        mint::authority = mint,
-    )]
-    pub mint: Account<'info, Mint>,
-
-    #[account(
         seeds = [
             b"global",
         ],
         bump,
     )]
     pub global: Account<'info, Global>,
+
+    #[account(
+        init,
+        payer = user,
+        mint::decimals = 6,
+        mint::authority = mint,
+    )]
+    pub mint: Account<'info, Mint>,
 
     #[account(
         init,

@@ -5,6 +5,9 @@ pub enum ErrorCodes {
     #[msg("global uninitialized: cant complete transaction until after global initialization")]
     GlobalUninitialized,
 
+    #[msg("fee recipient invalid: mismatch between provided fee recipient and global state")]
+    FeeRecipientInvalid,
+
     #[msg("slippage exceeded: output less than minimum required")]
     SlippageExceeded,
 

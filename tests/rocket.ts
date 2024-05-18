@@ -122,6 +122,8 @@ describe('rocket', () => {
         const swapSolToFixedTokenIx = await program.methods
             .swapSolToFixedToken(new BN(50_000_000_000_000), new BN(1_466_275_659))
             .accounts({
+                feeRecipient: wallet.publicKey,
+
                 mint: mintKeypair.publicKey,
 
                 associatedBondingCurve: associatedBondingCurve,
@@ -135,6 +137,8 @@ describe('rocket', () => {
         const swapFixedTokenToSolIx = await program.methods
             .swapFixedTokenToSol(new BN(50_000_000_000_000), new BN(1_000_000_000))
             .accounts({
+                feeRecipient: wallet.publicKey,
+
                 mint: mintKeypair.publicKey,
 
                 associatedBondingCurve: associatedBondingCurve,
