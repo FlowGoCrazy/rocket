@@ -120,6 +120,19 @@ describe('rocket', () => {
             .instruction();
         tx.add(swapSolToFixedTokenIx);
 
+        const swapFixedTokenToSolIx = await program.methods
+            .swapFixedTokenToSol(new BN(50_000_000_000_000), new BN(1_000_000_000))
+            .accounts({
+                mint: mintKeypair.publicKey,
+
+                associatedBondingCurve: associatedBondingCurve,
+
+                user: wallet.publicKey,
+                associatedUser: associatedUser,
+            })
+            .instruction();
+        tx.add(swapFixedTokenToSolIx);
+
         /* set blockhash / fee payer */
         const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
         tx.recentBlockhash = blockhash;
@@ -140,7 +153,7 @@ describe('rocket', () => {
 
         /* get confirmed tx result */
         const txData = await anchor.getProvider().connection.getParsedTransaction(sig, 'confirmed');
-        console.log(txData.meta.logMessages);
+        console.log(JSON.stringify(txData.meta.logMessages, null, 2));
 
         expect(txData.meta.err).to.eq(null);
     });
