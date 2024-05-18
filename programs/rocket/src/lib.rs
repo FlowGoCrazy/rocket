@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{entrypoint::ProgramResult, program::invoke, system_instruction};
+use anchor_lang::solana_program::{program::invoke, system_instruction};
 use anchor_spl::{
     associated_token::AssociatedToken,
     metadata::{
@@ -11,6 +11,7 @@ use anchor_spl::{
     },
 };
 use num_bigint::BigInt;
+use num_traits::cast::ToPrimitive;
 use spl_token::instruction::AuthorityType;
 use std::cmp;
 
@@ -20,7 +21,8 @@ declare_id!("8ppDaTFZgYJpPCrpxLow3Bq5HzZicQ6M63MGeXHPoEGb");
 pub mod rocket {
     use super::*;
 
-    pub fn create(ctx: Context<Create>, params: CreateParams) -> ProgramResult {
+    // allow a user to create a new token and initialize a bonding curve
+    pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
         /* init metadata for new mint */
         create_metadata_accounts_v3(
             CpiContext::new(
@@ -87,7 +89,12 @@ pub mod rocket {
         Ok(())
     }
 
-    pub fn buy(ctx: Context<Buy>, sol_in: u64) -> ProgramResult {
+    // allow buyers to swap a fixed amount of sol for a variable amount of tokens
+    pub fn swap_fixed_sol_to_token(
+        ctx: Context<Swap>,
+        sol_in: u64,
+        min_tokens_out: u64,
+    ) -> Result<()> {
         let bonding_curve = &ctx.accounts.bonding_curve;
         msg!(
             "Virtual Token Reserves: {}",
@@ -115,6 +122,11 @@ pub mod rocket {
         let tokens_out = cmp::min(&sub_result, &real_token_reserves);
         let (_, tokens_out_vec) = tokens_out.to_u64_digits();
         let tokens_out_u64 = tokens_out_vec[0];
+
+        /* make sure tokens_out_u64 is more than min_tokens_out */
+        if tokens_out_u64 < min_tokens_out {
+            return err!(CustomError::SlippageExceeded);
+        }
 
         /* should calculate fees here too */
 
@@ -159,6 +171,93 @@ pub mod rocket {
                 &[&seeds[..]],
             ),
             tokens_out_u64,
+        )?;
+
+        /* transfer fees to fee recipient */
+
+        Ok(())
+    }
+
+    /// allow buyers to swap a variable amount of sol for a fixed amount of tokens
+    pub fn swap_sol_to_fixed_token(
+        ctx: Context<Swap>,
+        tokens_out: u64,
+        max_sol_in: u64,
+    ) -> Result<()> {
+        let bonding_curve = &ctx.accounts.bonding_curve;
+        msg!(
+            "Virtual Token Reserves: {}",
+            bonding_curve.virtual_token_reserves
+        );
+        msg!(
+            "Virtual SOL Reserves: {}",
+            bonding_curve.virtual_sol_reserves
+        );
+        msg!("Real Token Reserves: {}", bonding_curve.real_token_reserves);
+        msg!("Real SOL Reserves: {}", bonding_curve.real_sol_reserves);
+        msg!("Token Total Supply: {}", bonding_curve.token_total_supply);
+        msg!("Complete: {}", bonding_curve.complete);
+
+        let tokens_out_bigint = BigInt::from(tokens_out);
+
+        let real_token_reserves = BigInt::from(bonding_curve.real_token_reserves);
+        let virtual_sol_reserves = BigInt::from(bonding_curve.virtual_sol_reserves);
+        let virtual_token_reserves = BigInt::from(bonding_curve.virtual_token_reserves);
+
+        let mul_result = &virtual_token_reserves * &virtual_sol_reserves;
+        let sub_result = &virtual_token_reserves - tokens_out_bigint;
+        let div_result = mul_result / sub_result;
+        let sol_in = div_result - &virtual_sol_reserves;
+        let sol_in_u64 = sol_in.to_u64().unwrap();
+
+        /* make sure sol_in_u64 is less than max_sol_in */
+        if sol_in_u64 > max_sol_in {
+            return err!(CustomError::SlippageExceeded);
+        }
+
+        /* should calculate fees here too */
+
+        msg!(
+            "initial quote: {} tokens for {} lamports",
+            &tokens_out,
+            &sol_in_u64,
+        );
+
+        /* should have a check to make sure buy does not exceed max per wallet here */
+
+        /* transfer sol to bonding curve */
+        invoke(
+            &system_instruction::transfer(
+                &ctx.accounts.user.key(),
+                &ctx.accounts.bonding_curve.key(),
+                sol_in_u64, /* might need changed later */
+            ),
+            &[
+                ctx.accounts.user.to_account_info(),
+                ctx.accounts.bonding_curve.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+
+        /* transfer tokens to buyer */
+        let mint_key = ctx.accounts.mint.key();
+        let seeds = &[
+            mint_key.as_ref(),
+            b"bonding_curve",
+            &[ctx.bumps.bonding_curve],
+        ];
+
+        transfer(
+            CpiContext::new_with_signer(
+                ctx.accounts.token_program.to_account_info(),
+                Transfer {
+                    from: ctx.accounts.associated_bonding_curve.to_account_info(),
+                    to: ctx.accounts.associated_user.to_account_info(),
+                    authority: ctx.accounts.bonding_curve.to_account_info(),
+                },
+                &[&seeds[..]],
+            ),
+            tokens_out,
         )?;
 
         /* transfer fees to fee recipient */
@@ -220,7 +319,7 @@ pub struct CreateParams {
 }
 
 #[derive(Accounts)]
-pub struct Buy<'info> {
+pub struct Swap<'info> {
     #[account(mut)]
     pub mint: Account<'info, Mint>,
 
@@ -266,4 +365,11 @@ pub struct BondingCurve {
 }
 impl BondingCurve {
     pub const SIZE: usize = 8 + 8 + 8 + 8 + 8 + 1;
+}
+
+/* ERRORS */
+#[error_code]
+pub enum CustomError {
+    #[msg("slippage exceeded: output less than minimum required")]
+    SlippageExceeded,
 }

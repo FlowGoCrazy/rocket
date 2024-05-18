@@ -94,8 +94,21 @@ describe('rocket', () => {
         );
         tx.add(createAtaIx);
 
-        const buyIx = await program.methods
-            .buy(new BN(1_000_000_000))
+        // const swapFixedSolToTokenIx = await program.methods
+        //     .swapFixedSolToToken(new BN(1_000_000_000), new BN(34_612_903_225_806))
+        //     .accounts({
+        //         mint: mintKeypair.publicKey,
+
+        //         associatedBondingCurve: associatedBondingCurve,
+
+        //         user: wallet.publicKey,
+        //         associatedUser: associatedUser,
+        //     })
+        //     .instruction();
+        // tx.add(swapFixedSolToTokenIx);
+
+        const swapSolToFixedTokenIx = await program.methods
+            .swapSolToFixedToken(new BN(50_000_000_000_000), new BN(1_466_275_659))
             .accounts({
                 mint: mintKeypair.publicKey,
 
@@ -105,7 +118,7 @@ describe('rocket', () => {
                 associatedUser: associatedUser,
             })
             .instruction();
-        tx.add(buyIx);
+        tx.add(swapSolToFixedTokenIx);
 
         /* set blockhash / fee payer */
         const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();
