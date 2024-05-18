@@ -10,9 +10,18 @@ use anchor_spl::{
 };
 use spl_token::instruction::AuthorityType;
 
+use crate::errors::ErrorCodes;
 use crate::state::bonding_curve::BondingCurve;
+use crate::state::global::Global;
 
 pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
+    let global = &ctx.accounts.global;
+
+    /* fail if global hasnt been initialized */
+    if !global.initialized {
+        return err!(ErrorCodes::GlobalUninitialized);
+    }
+
     /* init metadata for new mint */
     create_metadata_accounts_v3(
         CpiContext::new(
@@ -31,7 +40,7 @@ pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
             name: params.name,
             symbol: params.symbol,
             uri: params.uri,
-            seller_fee_basis_points: 0,
+            seller_fee_basis_points: 0, /* maybe implement later for token creators */
             creators: None,
             collection: None,
             uses: None,
@@ -51,7 +60,7 @@ pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
                 authority: ctx.accounts.mint.to_account_info(),
             },
         ),
-        1_000_000_000_000_000,
+        global.token_total_supply,
     )?;
 
     /* revoke mint authority */
@@ -69,11 +78,11 @@ pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
 
     /* set initial bonding curve state */
     let bonding_curve = &mut ctx.accounts.bonding_curve;
-    bonding_curve.virtual_token_reserves = 1_073_000_000_000_000; /* always starts at this number */
-    bonding_curve.virtual_sol_reserves = 30_000_000_000; /* always starts at this number */
-    bonding_curve.real_token_reserves = 793_100_000_000_000; /* always starts at this number */
+    bonding_curve.virtual_token_reserves = global.initial_virtual_token_reserves;
+    bonding_curve.virtual_sol_reserves = global.initial_virtual_sol_reserves;
+    bonding_curve.real_token_reserves = global.initial_real_token_reserves;
     bonding_curve.real_sol_reserves = 0;
-    bonding_curve.token_total_supply = 1_000_000_000_000_000; /* 1 billion + 6 decimals */
+    bonding_curve.token_total_supply = global.token_total_supply;
     bonding_curve.complete = false;
 
     Ok(())
@@ -88,6 +97,14 @@ pub struct Create<'info> {
         mint::authority = mint,
     )]
     pub mint: Account<'info, Mint>,
+
+    #[account(
+        seeds = [
+            b"global",
+        ],
+        bump,
+    )]
+    pub global: Account<'info, Global>,
 
     #[account(
         init,

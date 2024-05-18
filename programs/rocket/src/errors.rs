@@ -2,6 +2,9 @@ use anchor_lang::error_code;
 
 #[error_code]
 pub enum ErrorCodes {
+    #[msg("global uninitialized: cant complete transaction until after global initialization")]
+    GlobalUninitialized,
+
     #[msg("slippage exceeded: output less than minimum required")]
     SlippageExceeded,
 
