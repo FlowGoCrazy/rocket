@@ -1,5 +1,6 @@
 use anchor_lang::prelude::*;
 
+pub mod constants;
 pub mod errors;
 pub mod instructions;
 pub mod state;
@@ -10,6 +11,14 @@ declare_id!("8ppDaTFZgYJpPCrpxLow3Bq5HzZicQ6M63MGeXHPoEGb");
 #[program]
 pub mod rocket {
     use super::*;
+
+    // allow the admin to update global state
+    pub fn admin_update_global(
+        ctx: Context<UpdateGlobal>,
+        params: UpdateGlobalParams,
+    ) -> Result<()> {
+        admin_update_global::admin_update_global(ctx, params)
+    }
 
     /// allow a user to create a new token and initialize a bonding curve
     pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {

@@ -63,6 +63,20 @@ describe('rocket', () => {
             false,
         );
 
+        const tx = new anchor.web3.Transaction();
+
+        const adminUpdateGlobalIx = await program.methods
+            .adminUpdateGlobal({
+                feeRecipient: wallet.publicKey,
+                feeBasisPoints: new BN(100),
+                initialVirtualTokenReserves: new BN(1_073_000_000_000_000),
+                initialVirtualSolReserves: new BN(30_000_000_000),
+                initialRealTokenReserves: new BN(793_100_000_000_000),
+                tokenTotalSupply: new BN(1_000_000_000_000_000),
+            })
+            .instruction();
+        tx.add(adminUpdateGlobalIx);
+
         const createIx = await program.methods
             .create({
                 name: 'Test Rocket Token',
@@ -82,8 +96,6 @@ describe('rocket', () => {
                 tokenMetadataProgram: TOKEN_METADATA_PROGRAM_ID,
             })
             .instruction();
-
-        const tx = new anchor.web3.Transaction();
         tx.add(createIx);
 
         const createAtaIx = await createAssociatedTokenAccountInstruction(

@@ -19,6 +19,7 @@ impl BondingCurve {
         msg!("Real Token Reserves: {}", self.real_token_reserves);
         msg!("Real SOL Reserves: {}", self.real_sol_reserves);
         msg!("Token Total Supply: {}", self.token_total_supply);
+
         msg!("Complete: {}", self.complete);
 
         Ok(())

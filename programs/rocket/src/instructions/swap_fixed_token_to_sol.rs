@@ -9,18 +9,7 @@ use crate::instructions::swap::Swap;
 
 pub fn swap_fixed_token_to_sol(ctx: Context<Swap>, tokens_in: u64, min_sol_out: u64) -> Result<()> {
     let bonding_curve = &ctx.accounts.bonding_curve;
-    msg!(
-        "Virtual Token Reserves: {}",
-        bonding_curve.virtual_token_reserves
-    );
-    msg!(
-        "Virtual SOL Reserves: {}",
-        bonding_curve.virtual_sol_reserves
-    );
-    msg!("Real Token Reserves: {}", bonding_curve.real_token_reserves);
-    msg!("Real SOL Reserves: {}", bonding_curve.real_sol_reserves);
-    msg!("Token Total Supply: {}", bonding_curve.token_total_supply);
-    msg!("Complete: {}", bonding_curve.complete);
+    bonding_curve.print()?;
 
     /* fail if the bonding curve is already complete */
     if bonding_curve.complete {
