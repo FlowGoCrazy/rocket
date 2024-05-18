@@ -109,6 +109,11 @@ pub mod rocket {
         msg!("Token Total Supply: {}", bonding_curve.token_total_supply);
         msg!("Complete: {}", bonding_curve.complete);
 
+        /* fail if the bonding curve is already complete */
+        if bonding_curve.complete {
+            return err!(CustomError::BondingCurveComplete);
+        }
+
         let buy_sol_amount = BigInt::from(sol_in);
 
         let real_token_reserves = BigInt::from(bonding_curve.real_token_reserves);
@@ -120,8 +125,7 @@ pub mod rocket {
         let div_result = (mul_result / add_result) + 1;
         let sub_result = &virtual_token_reserves - div_result;
         let tokens_out = cmp::min(&sub_result, &real_token_reserves);
-        let (_, tokens_out_vec) = tokens_out.to_u64_digits();
-        let tokens_out_u64 = tokens_out_vec[0];
+        let tokens_out_u64 = tokens_out.to_u64().unwrap();
 
         /* make sure tokens_out_u64 is more than min_tokens_out */
         if tokens_out_u64 < min_tokens_out {
@@ -173,6 +177,18 @@ pub mod rocket {
             tokens_out_u64,
         )?;
 
+        /* update bonding curve info */
+        let bonding_curve = &mut ctx.accounts.bonding_curve;
+
+        bonding_curve.virtual_token_reserves -= tokens_out_u64;
+        bonding_curve.real_token_reserves -= tokens_out_u64;
+        bonding_curve.virtual_sol_reserves += sol_in; /* make sure this only includes sol spent for tokens not fees */
+        bonding_curve.real_sol_reserves += sol_in; /* make sure this only includes sol spent for tokens not fees */
+
+        if bonding_curve.real_token_reserves == 0 {
+            bonding_curve.complete = true;
+        }
+
         /* transfer fees to fee recipient */
 
         Ok(())
@@ -198,9 +214,13 @@ pub mod rocket {
         msg!("Token Total Supply: {}", bonding_curve.token_total_supply);
         msg!("Complete: {}", bonding_curve.complete);
 
+        /* fail if the bonding curve is already complete */
+        if bonding_curve.complete {
+            return err!(CustomError::BondingCurveComplete);
+        }
+
         let tokens_out_bigint = BigInt::from(tokens_out);
 
-        let real_token_reserves = BigInt::from(bonding_curve.real_token_reserves);
         let virtual_sol_reserves = BigInt::from(bonding_curve.virtual_sol_reserves);
         let virtual_token_reserves = BigInt::from(bonding_curve.virtual_token_reserves);
 
@@ -259,6 +279,18 @@ pub mod rocket {
             ),
             tokens_out,
         )?;
+
+        /* update bonding curve info */
+        let bonding_curve = &mut ctx.accounts.bonding_curve;
+
+        bonding_curve.virtual_token_reserves -= tokens_out;
+        bonding_curve.real_token_reserves -= tokens_out;
+        bonding_curve.virtual_sol_reserves += sol_in_u64; /* make sure this only includes sol spent for tokens not fees */
+        bonding_curve.real_sol_reserves += sol_in_u64; /* make sure this only includes sol spent for tokens not fees */
+
+        if bonding_curve.real_token_reserves == 0 {
+            bonding_curve.complete = true;
+        }
 
         /* transfer fees to fee recipient */
 
@@ -372,4 +404,7 @@ impl BondingCurve {
 pub enum CustomError {
     #[msg("slippage exceeded: output less than minimum required")]
     SlippageExceeded,
+
+    #[msg("bonding curve complete: trading locked until migration to raydium")]
+    BondingCurveComplete,
 }
