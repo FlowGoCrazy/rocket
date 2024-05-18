@@ -85,18 +85,20 @@ pub fn swap_fixed_sol_to_token(ctx: Context<Swap>, sol_in: u64, min_tokens_out: 
     )?;
 
     /* transfer fees to fee recipient */
-    invoke(
-        &system_instruction::transfer(
-            &ctx.accounts.user.key(),
-            &ctx.accounts.fee_recipient.key(),
-            trade_fee,
-        ),
-        &[
-            ctx.accounts.user.to_account_info(),
-            ctx.accounts.fee_recipient.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
-        ],
-    )?;
+    if trade_fee > 0 {
+        invoke(
+            &system_instruction::transfer(
+                &ctx.accounts.user.key(),
+                &ctx.accounts.fee_recipient.key(),
+                trade_fee,
+            ),
+            &[
+                ctx.accounts.user.to_account_info(),
+                ctx.accounts.fee_recipient.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+    }
 
     /* transfer tokens to buyer */
     let mint_key = ctx.accounts.mint.key();

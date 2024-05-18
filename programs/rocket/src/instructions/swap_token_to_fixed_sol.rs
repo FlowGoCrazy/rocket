@@ -70,18 +70,20 @@ pub fn swap_token_to_fixed_sol(ctx: Context<Swap>, sol_out: u64, max_tokens_in: 
     )?;
 
     /* transfer fees to fee recipient */
-    invoke(
-        &system_instruction::transfer(
-            &ctx.accounts.user.key(),
-            &ctx.accounts.fee_recipient.key(),
-            trade_fee,
-        ),
-        &[
-            ctx.accounts.user.to_account_info(),
-            ctx.accounts.fee_recipient.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
-        ],
-    )?;
+    if trade_fee > 0 {
+        invoke(
+            &system_instruction::transfer(
+                &ctx.accounts.user.key(),
+                &ctx.accounts.fee_recipient.key(),
+                trade_fee,
+            ),
+            &[
+                ctx.accounts.user.to_account_info(),
+                ctx.accounts.fee_recipient.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+    }
 
     /* transfer sol from bonding curve to user */
     require!(
@@ -111,8 +113,6 @@ pub fn swap_token_to_fixed_sol(ctx: Context<Swap>, sol_out: u64, max_tokens_in: 
     bonding_curve.real_token_reserves += tokens_in_u64;
     bonding_curve.virtual_sol_reserves -= sol_out;
     bonding_curve.real_sol_reserves -= sol_out;
-
-    /* transfer fees to fee recipient */
 
     Ok(())
 }

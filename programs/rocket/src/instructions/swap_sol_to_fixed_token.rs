@@ -73,18 +73,20 @@ pub fn swap_sol_to_fixed_token(ctx: Context<Swap>, tokens_out: u64, max_sol_in: 
     )?;
 
     /* transfer fees to fee recipient */
-    invoke(
-        &system_instruction::transfer(
-            &ctx.accounts.user.key(),
-            &ctx.accounts.fee_recipient.key(),
-            trade_fee,
-        ),
-        &[
-            ctx.accounts.user.to_account_info(),
-            ctx.accounts.fee_recipient.to_account_info(),
-            ctx.accounts.system_program.to_account_info(),
-        ],
-    )?;
+    if trade_fee > 0 {
+        invoke(
+            &system_instruction::transfer(
+                &ctx.accounts.user.key(),
+                &ctx.accounts.fee_recipient.key(),
+                trade_fee,
+            ),
+            &[
+                ctx.accounts.user.to_account_info(),
+                ctx.accounts.fee_recipient.to_account_info(),
+                ctx.accounts.system_program.to_account_info(),
+            ],
+        )?;
+    }
 
     /* transfer tokens to buyer */
     let mint_key = ctx.accounts.mint.key();
@@ -118,8 +120,6 @@ pub fn swap_sol_to_fixed_token(ctx: Context<Swap>, tokens_out: u64, max_sol_in: 
     if bonding_curve.real_token_reserves == 0 {
         bonding_curve.complete = true;
     }
-
-    /* transfer fees to fee recipient */
 
     Ok(())
 }
