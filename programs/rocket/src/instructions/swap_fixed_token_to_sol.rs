@@ -62,11 +62,12 @@ pub fn swap_fixed_token_to_sol(ctx: Context<Swap>, tokens_in: u64, min_sol_out: 
     );
 
     /* depending on whether or not the user was referred, calculate and send fees */
+    let referrer_ref = &ctx.accounts.referrer_ref;
+
     if global.fee_basis_points > 0 {
-        if ctx.accounts.referrer.key() == global.fee_recipient {
-            /* if referrer is default ( fee_recipient ) just send the whole trade_fee at once */
-            let trade_fee =
-                (sol_out_u64 * (global.fee_basis_points - global.ref_share_basis_points)) / 10_000;
+        if referrer_ref.owner == global.fee_recipient {
+            /* if referrer account is owned by default ( fee_recipient ) just send the whole trade_fee directly to fee recipient */
+            let trade_fee = (sol_out_u64 * global.fee_basis_points) / 10_000;
             invoke(
                 &system_instruction::transfer(
                     &ctx.accounts.user.key(),
@@ -100,15 +101,19 @@ pub fn swap_fixed_token_to_sol(ctx: Context<Swap>, tokens_in: u64, min_sol_out: 
             invoke(
                 &system_instruction::transfer(
                     &ctx.accounts.user.key(),
-                    &ctx.accounts.referrer.key(),
+                    &ctx.accounts.referrer_ref.key(),
                     referrer_reward,
                 ),
                 &[
                     ctx.accounts.user.to_account_info(),
-                    ctx.accounts.referrer.to_account_info(),
+                    ctx.accounts.referrer_ref.to_account_info(),
                     ctx.accounts.system_program.to_account_info(),
                 ],
             )?;
+
+            /* add reward to referrer's user_ref account balance */
+            let referrer_ref = &mut ctx.accounts.referrer_ref;
+            referrer_ref.balance += referrer_reward;
         }
     }
 

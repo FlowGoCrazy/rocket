@@ -7,6 +7,7 @@ use anchor_spl::{
 
 use crate::state::bonding_curve::BondingCurve;
 use crate::state::global::Global;
+use crate::state::user_ref::UserRef;
 
 #[derive(Accounts)]
 pub struct Swap<'info> {
@@ -26,6 +27,16 @@ pub struct Swap<'info> {
     #[account(mut)]
     pub referrer: AccountInfo<'info>,
 
+    #[account(
+        mut,
+        seeds = [
+            referrer.key().as_ref(),
+            b"ref",
+        ],
+        bump,
+    )]
+    pub referrer_ref: Account<'info, UserRef>,
+
     #[account(mut)]
     pub mint: Account<'info, Mint>,
 
@@ -40,6 +51,7 @@ pub struct Swap<'info> {
     pub bonding_curve: Account<'info, BondingCurve>,
 
     #[account(
+        mut,
         associated_token::mint = mint,
         associated_token::authority = bonding_curve,
     )]
@@ -49,6 +61,7 @@ pub struct Swap<'info> {
     pub user: Signer<'info>,
 
     #[account(
+        mut,
         associated_token::mint = mint,
         associated_token::authority = user,
     )]

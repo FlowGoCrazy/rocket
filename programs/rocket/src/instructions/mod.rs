@@ -1,6 +1,7 @@
 pub mod admin_update_global;
 pub mod admin_withdraw;
 pub mod create;
+pub mod init_user_ref;
 pub mod swap;
 pub mod swap_fixed_sol_to_token;
 pub mod swap_fixed_token_to_sol;
@@ -10,6 +11,7 @@ pub mod swap_token_to_fixed_sol;
 pub use admin_update_global::*;
 pub use admin_withdraw::*;
 pub use create::*;
+pub use init_user_ref::*;
 pub use swap::*;
 pub use swap_fixed_sol_to_token::*;
 pub use swap_fixed_token_to_sol::*;

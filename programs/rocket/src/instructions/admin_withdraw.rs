@@ -92,6 +92,7 @@ pub struct AdminWithdraw<'info> {
     pub bonding_curve: Account<'info, BondingCurve>,
 
     #[account(
+        mut,
         associated_token::mint = mint,
         associated_token::authority = bonding_curve,
     )]

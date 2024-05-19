@@ -25,6 +25,11 @@ pub mod rocket {
         admin_withdraw::admin_withdraw(ctx)
     }
 
+    // allow a signer to initialize a user_ref account for themself or another user
+    pub fn init_user_ref(ctx: Context<InitUserRef>) -> Result<()> {
+        init_user_ref::init_user_ref(ctx)
+    }
+
     /// allow a user to create a new token and initialize a bonding curve
     pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
         create::create(ctx, params)
