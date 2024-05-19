@@ -20,6 +20,11 @@ pub mod rocket {
         admin_update_global::admin_update_global(ctx, params)
     }
 
+    // allow the admin to withdraw liquidity for migration
+    pub fn admin_withdraw(ctx: Context<AdminWithdraw>) -> Result<()> {
+        admin_withdraw::admin_withdraw(ctx)
+    }
+
     /// allow a user to create a new token and initialize a bonding curve
     pub fn create(ctx: Context<Create>, params: CreateParams) -> Result<()> {
         create::create(ctx, params)

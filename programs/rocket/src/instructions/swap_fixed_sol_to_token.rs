@@ -163,8 +163,8 @@ pub fn swap_fixed_sol_to_token(ctx: Context<Swap>, sol_in: u64, min_tokens_out: 
 
     bonding_curve.virtual_token_reserves -= tokens_out_u64;
     bonding_curve.real_token_reserves -= tokens_out_u64;
-    bonding_curve.virtual_sol_reserves += sol_in; /* make sure this only includes sol spent for tokens not fees */
-    bonding_curve.real_sol_reserves += sol_in; /* make sure this only includes sol spent for tokens not fees */
+    bonding_curve.virtual_sol_reserves += sol_in;
+    bonding_curve.real_sol_reserves += sol_in;
 
     if bonding_curve.real_token_reserves == 0 {
         bonding_curve.complete = true;

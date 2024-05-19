@@ -124,7 +124,8 @@ describe('rocket', () => {
         // tx.add(swapFixedSolToTokenIx);
 
         const swapSolToFixedTokenIx = await program.methods
-            .swapSolToFixedToken(new BN(50_000_000_000_000), new BN(1_466_275_659))
+            // .swapSolToFixedToken(new BN(50_000_000_000_000), new BN(1_466_275_659))
+            .swapSolToFixedToken(new BN(793_100_000_000_000), new BN(86_000_000_000))
             .accounts({
                 feeRecipient: wallet.publicKey,
                 referrer: mockReferrerKeypair.publicKey,
@@ -139,21 +140,33 @@ describe('rocket', () => {
             .instruction();
         tx.add(swapSolToFixedTokenIx);
 
-        const swapFixedTokenToSolIx = await program.methods
-            .swapFixedTokenToSol(new BN(50_000_000_000_000), new BN(1_000_000_000))
-            .accounts({
-                feeRecipient: wallet.publicKey,
-                referrer: mockReferrerKeypair.publicKey,
+        // const swapFixedTokenToSolIx = await program.methods
+        //     .swapFixedTokenToSol(new BN(50_000_000_000_000), new BN(1_000_000_000))
+        //     .accounts({
+        //         feeRecipient: wallet.publicKey,
+        //         referrer: mockReferrerKeypair.publicKey,
 
+        //         mint: mintKeypair.publicKey,
+
+        //         associatedBondingCurve: associatedBondingCurve,
+
+        //         user: wallet.publicKey,
+        //         associatedUser: associatedUser,
+        //     })
+        //     .instruction();
+        // tx.add(swapFixedTokenToSolIx);
+
+        const adminWithdrawIx = await program.methods
+            .adminWithdraw()
+            .accounts({
                 mint: mintKeypair.publicKey,
 
                 associatedBondingCurve: associatedBondingCurve,
 
-                user: wallet.publicKey,
-                associatedUser: associatedUser,
+                associatedAdmin: associatedUser,
             })
             .instruction();
-        tx.add(swapFixedTokenToSolIx);
+        tx.add(adminWithdrawIx);
 
         /* set blockhash / fee payer */
         const { blockhash, lastValidBlockHeight } = await provider.connection.getLatestBlockhash();

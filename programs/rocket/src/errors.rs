@@ -17,6 +17,9 @@ pub enum ErrorCodes {
     #[msg("bonding curve complete: trading locked until migration to raydium")]
     BondingCurveComplete,
 
+    #[msg("bonding curve incomplete: cant withdraw until it has been completed")]
+    BondingCurveIncomplete,
+
     #[msg("insufficient funds: not enough funds to complete transaction")]
     InsufficientFunds,
 
