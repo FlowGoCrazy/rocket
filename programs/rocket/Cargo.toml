@@ -1,7 +1,7 @@
 [package]
 name = "rocket"
 version = "0.1.0"
-description = "Created with Anchor"
+description = "rocket your coins to raydium"
 edition = "2021"
 
 [lib]
